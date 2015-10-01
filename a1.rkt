@@ -132,11 +132,11 @@ Read through the starter code carefully. In particular, look for:
     (if (empty? functions-text-list)
         (split-right body "Finis")
         (split-right (split-right body "Finis") "Finis")))
+  (define characters-value-list (map evaluate-character characters-text-list))
   ;characters-text-list
   ;functions-text-list
   ;dialogue-text-list
   ;body
-  (define characters-value-list (map evaluate-character characters-text-list))
   characters-value-list
   )
 
@@ -171,12 +171,34 @@ Read through the starter code carefully. In particular, look for:
           (count-bad-words (rest description-list) acc)
           (count-bad-words (rest description-list) (+ acc 1)))))
 
+; Evaluate expressions
 (define (evaluate-bad description b)
   (* (* -1 (expt 2 b)) (length (string-split description))))
 
 (define (evaluate-normal description)
   (length (string-split description)))
+
+; Dialogue parsing functions
+(define (evaluate-dialogue dialogue-text-list)
+  (evaluate-dialogue-helper dialogue-text-list '()))
   
+(define (evaluate-dialogue-helper dialogue-text-list acc)
+  (if (empty? dialogue-text-list)
+      acc
+      (evaluate-dialogue-helper (rest (rest dialogue-text-list)) (cons acc (evaluate-dialogue-line dialogue-text-list)))))
+
+(define (evaluate-dialogue-line dialogue-text-list)
+  ; check for for function call
+  ; check if its a entranc'd or join'd
+  ; evaluate
+  ;    when evaluating, need to check for self-refs and names
+  void)
+
+(define (entrancd x y)
+  (* x y))
+
+(define (joind x y)
+  (+ x y))
 
 ; Sublist function from EX1
 
