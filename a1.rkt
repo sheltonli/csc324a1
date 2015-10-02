@@ -133,11 +133,6 @@ Read through the starter code carefully. In particular, look for:
         (split-right body "Finis")
         (split-right (split-right body "Finis") "Finis")))
   (define characters-value-list (map evaluate-character characters-text-list))
-  ;characters-text-list
-  ;functions-text-list
-  ;dialogue-text-list
-  ;body
-  ;characters-value-list
   (evaluate-dialogue dialogue-text-list '())
   )
 
@@ -192,7 +187,20 @@ Read through the starter code carefully. In particular, look for:
         (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)))))))))
 
 (define (evaluate-line name line)
-  (do-calculation name line))
+  (define entrancd-splitter (make-splitter "entranc'd by"))
+  (define joind-splitter (make-splitter "join'd with"))
+  (cond
+    [(entrancd-splitter line)
+     (let* ([splitter-res (entrancd-splitter line)]
+            [ex1 (string-join (first splitter-res))]
+            [ex2 (string-join (first (rest splitter-res)))])
+        (entrancd (do-calculation name ex1) (do-calculation name ex2)))]
+    [(joind-splitter line)
+     (let* ([splitter-res (joind-splitter line)]
+            [ex1 (string-join (first splitter-res))]
+            [ex2 (string-join (first (rest splitter-res)))])
+        (joind (do-calculation name ex1) (do-calculation name ex2)))]
+    [else (do-calculation name line)]))
 
 (define (do-calculation name line)
    (let* ([bad-word-count (count-bad-words (string-split line) 0)])
@@ -207,7 +215,6 @@ Read through the starter code carefully. In particular, look for:
   (+ x y))
 
 ; Sublist function from EX1
-
 (define (sublist sub-lst lst)
   (sublist-helper sub-lst lst 0))
 
@@ -224,6 +231,14 @@ Read through the starter code carefully. In particular, look for:
     [(empty? lst) #f]
     [(equal? (first sub-lst) (first lst)) (check-sublist (rest sub-lst) (rest lst))]
     [else #f]))
+
+; Splitter function from EX3
+(define (make-splitter splitter)
+  (lambda (lst)
+    (let* ([n (sublist (string-split splitter) (string-split lst))])
+      (if (equal? n #f)
+          #f
+          (list (take (string-split lst) n) (drop (string-split lst) (+ n (length (string-split splitter)))))))))
 
 ;(interpret "descriptions.txt")
 ;(interpret "name_lookup.txt")
