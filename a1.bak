@@ -137,8 +137,7 @@ Read through the starter code carefully. In particular, look for:
   ;dialogue-text-list
   ;body
   (define characters-value-list (map evaluate-character characters-text-list))
-  ;characters-value-list
-  (evaluate-dialogue dialogue-text-list '())
+  characters-value-list
   )
 
 ; The following two helper functions are used to section the body text into characters, functions and dialogue
@@ -177,28 +176,7 @@ Read through the starter code carefully. In particular, look for:
 
 (define (evaluate-normal description)
   (length (string-split description)))
-
-
-; Settings parsing functions
-;(define (evaluate-setting line)
-;  (let* ([name (first (string-split line ","))]
-;         [expression (first (rest (string-split line ",")))])
-;    ()))
-
-(define (evaluate-dialogue dialogue-list acc)
-  (if (empty? dialogue-list)
-      acc
-      (let* ([name (first dialogue-list)])
-        (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)))))))))
-
-(define (evaluate-line name line)
-  (do-calculation name line))
-
-(define (do-calculation name line)
-   (let* ([bad-word-count (count-bad-words (string-split line) 0)])
-    (if (> bad-word-count 0)
-        (evaluate-bad line bad-word-count)
-        (evaluate-normal line))))
+  
 
 ; Sublist function from EX1
 
@@ -221,5 +199,5 @@ Read through the starter code carefully. In particular, look for:
 
 ;(interpret "descriptions.txt")
 ;(interpret "name_lookup.txt")
-;(interpret "sample.txt")
-(interpret "part1.txt")
+(interpret "sample.txt")
+;(interpret "part1.txt")
