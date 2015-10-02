@@ -132,11 +132,11 @@ Read through the starter code carefully. In particular, look for:
     (if (empty? functions-text-list)
         (split-right body "Finis")
         (split-right (split-right body "Finis") "Finis")))
+  (define characters-value-list (map evaluate-character characters-text-list))
   ;characters-text-list
   ;functions-text-list
   ;dialogue-text-list
   ;body
-  (define characters-value-list (map evaluate-character characters-text-list))
   ;characters-value-list
   (evaluate-dialogue dialogue-text-list '())
   )
@@ -172,12 +172,12 @@ Read through the starter code carefully. In particular, look for:
           (count-bad-words (rest description-list) acc)
           (count-bad-words (rest description-list) (+ acc 1)))))
 
+; Evaluate expressions
 (define (evaluate-bad description b)
   (* (* -1 (expt 2 b)) (length (string-split description))))
 
 (define (evaluate-normal description)
   (length (string-split description)))
-
 
 ; Settings parsing functions
 ;(define (evaluate-setting line)
@@ -199,6 +199,12 @@ Read through the starter code carefully. In particular, look for:
     (if (> bad-word-count 0)
         (evaluate-bad line bad-word-count)
         (evaluate-normal line))))
+
+(define (entrancd x y)
+  (* x y))
+
+(define (joind x y)
+  (+ x y))
 
 ; Sublist function from EX1
 
