@@ -133,6 +133,7 @@ Read through the starter code carefully. In particular, look for:
         (split-right body "Finis")
         (split-right (split-right body "Finis") "Finis")))
   (define characters-value-list (map evaluate-character characters-text-list))
+  (define functions-value-list (map evaluate-function functions-text-list))
   (evaluate-dialogue dialogue-text-list '() characters-value-list)
   )
 
@@ -159,6 +160,11 @@ Read through the starter code carefully. In particular, look for:
     (if (> bad-word-count 0)
         (list name (evaluate-bad description bad-word-count))
         (list name (evaluate-normal description)))))
+
+(define (evaluate-function line)
+  (let* ([f-name (first (string-split line ","))]
+         [description (first (rest (string-split line ",")))])
+   (list f-name description)))
 
 (define (count-bad-words description-list acc)
   (if (empty? description-list)
@@ -232,7 +238,6 @@ Read through the starter code carefully. In particular, look for:
           #t
           (member-nested (rest lst) value))))
           
-
 ; Retrieve value from nested list
 (define (retrieve-value lst value)
   (if (empty? lst)
