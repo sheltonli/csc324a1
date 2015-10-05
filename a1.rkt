@@ -133,7 +133,7 @@ Read through the starter code carefully. In particular, look for:
         (split-right body "Finis")
         (split-right (split-right body "Finis") "Finis")))
   (define characters-value-list (map evaluate-character characters-text-list))
-  (evaluate-dialogue dialogue-text-list '())
+  (evaluate-dialogue dialogue-text-list '() characters-value-list)
   )
 
 ; The following two helper functions are used to section the body text into characters, functions and dialogue
@@ -180,13 +180,13 @@ Read through the starter code carefully. In particular, look for:
 ;         [expression (first (rest (string-split line ",")))])
 ;    ()))
 
-(define (evaluate-dialogue dialogue-list acc)
+(define (evaluate-dialogue dialogue-list acc cvl)
   (if (empty? dialogue-list)
       acc
-      (let* ([name (first dialogue-list)])
-        (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)))))))))
+      (let* ([name (first (string-split (first dialogue-list) ":"))])
+        (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)) cvl))) cvl))))
 
-(define (evaluate-line name line)
+(define (evaluate-line name line cvl)
   (define entrancd-splitter (make-splitter "entranc'd by"))
   (define joind-splitter (make-splitter "join'd with"))
   (cond
@@ -194,19 +194,29 @@ Read through the starter code carefully. In particular, look for:
      (let* ([splitter-res (entrancd-splitter line)]
             [ex1 (string-join (first splitter-res))]
             [ex2 (string-join (first (rest splitter-res)))])
-        (entrancd (do-calculation name ex1) (do-calculation name ex2)))]
+        (entrancd (do-calculation name ex1 cvl) (do-calculation name ex2 cvl)))]
     [(joind-splitter line)
      (let* ([splitter-res (joind-splitter line)]
             [ex1 (string-join (first splitter-res))]
             [ex2 (string-join (first (rest splitter-res)))])
-        (joind (do-calculation name ex1) (do-calculation name ex2)))]
-    [else (do-calculation name line)]))
+        (joind (do-calculation name ex1 cvl) (do-calculation name ex2 cvl)))]
+    [else (do-calculation name line cvl)]))
 
-(define (do-calculation name line)
+(define (do-calculation name line cvl)
+  name
    (let* ([bad-word-count (count-bad-words (string-split line) 0)])
-    (if (> bad-word-count 0)
+     (cond
+       [(equal? (length (string-split line)) 1)
+        (cond
+          [(member line self-refs) (retrieve-value cvl name)]
+          [(member-nested cvl line) (retrieve-value cvl line)]
+          [else (if (> bad-word-count 0)
+                    (evaluate-bad line bad-word-count)
+                    (evaluate-normal line))])]
+       [else 
+        (if (> bad-word-count 0)
         (evaluate-bad line bad-word-count)
-        (evaluate-normal line))))
+        (evaluate-normal line))])))
 
 (define (entrancd x y)
   (* x y))
@@ -214,6 +224,25 @@ Read through the starter code carefully. In particular, look for:
 (define (joind x y)
   (+ x y))
 
+; Check if member of nested list
+(define (member-nested lst value)
+  (if (empty? lst)
+      #f
+      (if (equal? value (first (first lst)))
+          #t
+          (member-nested (rest lst) value))))
+          
+
+; Retrieve value from nested list
+(define (retrieve-value lst value)
+  (if (empty? lst)
+      #f
+      (let* ([name (first (first lst))]
+             [val (first (rest (first lst)))])
+        (if (equal? value name)
+            val
+            (retrieve-value (rest lst) value)))))
+            
 ; Sublist function from EX1
 (define (sublist sub-lst lst)
   (sublist-helper sub-lst lst 0))
@@ -243,4 +272,5 @@ Read through the starter code carefully. In particular, look for:
 ;(interpret "descriptions.txt")
 ;(interpret "name_lookup.txt")
 ;(interpret "sample.txt")
-(interpret "part1.txt")
+;(interpret "part1.txt")
+;(interpret "arithmetic.txt")
