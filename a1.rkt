@@ -134,7 +134,7 @@ Read through the starter code carefully. In particular, look for:
         (split-right (split-right body "Finis") "Finis")))
   (define characters-value-list (map evaluate-character characters-text-list))
   (define functions-value-list (map evaluate-function functions-text-list))
-  (evaluate-dialogue dialogue-text-list '() characters-value-list)
+  (evaluate-dialogue dialogue-text-list '() characters-value-list functions-value-list)
   )
 
 ; The following two helper functions are used to section the body text into characters, functions and dialogue
@@ -180,38 +180,44 @@ Read through the starter code carefully. In particular, look for:
 (define (evaluate-normal description)
   (length (string-split description)))
 
-; Settings parsing functions
-;(define (evaluate-setting line)
-;  (let* ([name (first (string-split line ","))]
-;         [expression (first (rest (string-split line ",")))])
-;    ()))
-
-(define (evaluate-dialogue dialogue-list acc cvl)
+;Evaluate dialogue
+(define (evaluate-dialogue dialogue-list acc cvl fvl)
   (if (empty? dialogue-list)
       acc
+      ; need if to check for case of blank dialogue line , then append 0 to acc
       (let* ([name (first (string-split (first dialogue-list) ":"))])
-        (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)) cvl))) cvl))))
+        (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)) cvl fvl))) cvl fvl))))
 
-(define (evaluate-line name line cvl)
-  (define entrancd-splitter (make-splitter "entranc'd by"))
-  (define joind-splitter (make-splitter "join'd with"))
+(define (evaluate-line name line cvl fvl)
+  (define function-splitter (make-splitter "The song of"))
+  (define and-splitter (make-splitter "and"))
   (cond
-    [(entrancd-splitter line)
-     (let* ([splitter-res (entrancd-splitter line)]
-            [ex1 (string-join (first splitter-res))]
-            [ex2 (string-join (first (rest splitter-res)))])
-        (entrancd (do-calculation name ex1 cvl) (do-calculation name ex2 cvl)))]
-    [(joind-splitter line)
-     (let* ([splitter-res (joind-splitter line)]
-            [ex1 (string-join (first splitter-res))]
-            [ex2 (string-join (first (rest splitter-res)))])
-        (joind (do-calculation name ex1 cvl) (do-calculation name ex2 cvl)))]
+    [(function-splitter line)
+     (let* ([function-splitter-res (function-splitter line)]
+            [new-line (string-join (first (rest function-splitter-res)))]
+            [and-splitter-res (and-splitter new-line)]
+            [function-name (first (first and-splitter-res))]
+            [function-argument (string-join (first (rest and-splitter-res)))]
+            [func (retrieve-value fvl function-name)])
+       ; this doesn't work for nested functions, need to figure that out
+       (do-calculation name (string-replace func "Hamlet" function-argument) cvl))]
     [else (do-calculation name line cvl)]))
 
 (define (do-calculation name line cvl)
-  name
-   (let* ([bad-word-count (count-bad-words (string-split line) 0)])
+   (let* ([bad-word-count (count-bad-words (string-split line) 0)]
+          [entrancd-splitter (make-splitter "entranc'd by")]
+          [joind-splitter (make-splitter "join'd with")])
      (cond
+       [(entrancd-splitter line)
+        (let* ([splitter-res (entrancd-splitter line)]
+               [ex1 (string-join (first splitter-res))]
+               [ex2 (string-join (first (rest splitter-res)))])
+          (entrancd (do-calculation name ex1 cvl) (do-calculation name ex2 cvl)))]
+       [(joind-splitter line)
+        (let* ([splitter-res (joind-splitter line)]
+               [ex1 (string-join (first splitter-res))]
+               [ex2 (string-join (first (rest splitter-res)))])
+          (joind (do-calculation name ex1 cvl) (do-calculation name ex2 cvl)))]
        [(equal? (length (string-split line)) 1)
         (cond
           [(member line self-refs) (retrieve-value cvl name)]
@@ -276,6 +282,6 @@ Read through the starter code carefully. In particular, look for:
 
 ;(interpret "descriptions.txt")
 ;(interpret "name_lookup.txt")
-;(interpret "sample.txt")
+(interpret "sample.txt")
 ;(interpret "part1.txt")
 ;(interpret "arithmetic.txt")
