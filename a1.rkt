@@ -125,7 +125,6 @@ Read through the starter code carefully. In particular, look for:
   it just outputs the semantically meaningful lines in the file.
 |#
 (define (evaluate body)
-  ; TODO: Change this part!
   (define characters-text-list (split-left body "Finis"))
   (define functions-text-list (split-left (split-right body "Finis") "Finis"))
    (define dialogue-text-list
@@ -139,11 +138,23 @@ Read through the starter code carefully. In particular, look for:
 
 ; The following two helper functions are used to section the body text into characters, functions and dialogue
 
-; Return a list of everything before the first occurence of word, else return empty list if word does not occur in body
-(define (split-left body word)
-  (if (equal? (sublist (list word) body) #f)
+#|
+(split-left body line)
+  body: a list of lines corresponding to the semantically meaningful text
+  of a FunShake file.
+  line: a string
+
+  Returns a list lines before the first occurence of line,
+  else return an empty list if line does not occur in body.
+
+> (split-left '("First line" "Test" "Second line") "Test")
+2
+|#
+
+(define (split-left body line)
+  (if (equal? (sublist (list line) body) #f)
       '()
-      (rest (take body (sublist (list word) body)))))
+      (rest (take body (sublist (list line) body)))))
 
 ; Return a list of everything after the first occurence of word, else return empty list if word does not occur in body
 (define (split-right body word)
@@ -200,8 +211,46 @@ Read through the starter code carefully. In particular, look for:
             [function-argument (string-join (first (rest and-splitter-res)))]
             [func (retrieve-value fvl function-name)])
        ; this doesn't work for nested functions, need to figure that out
-       (do-calculation name (string-replace func "Hamlet" function-argument) cvl))]
+       (if (function-splitter func)
+           (do-function func (do-calculation name function-argument cvl) name cvl fvl)
+           (do-calculation name (string-replace func "Hamlet" function-argument) cvl)))]
     [else (do-calculation name line cvl)]))
+
+(define (do-function func evaluated-arg name cvl fvl)
+  (define function-splitter (make-splitter "The song of"))
+  (define and-splitter (make-splitter "and"))
+  (cond
+    [(function-splitter func)
+     (let* ([function-splitter-res (function-splitter func)]
+            [new-line (string-join (first (rest function-splitter-res)))]
+            [and-splitter-res (and-splitter new-line)]
+            [function-name (first (first and-splitter-res))]
+            [function-argument (string-join (first (rest and-splitter-res)))]
+            [func (retrieve-value fvl function-name)])
+       ; this doesn't work for nested functions, need to figure that out
+       (if (function-splitter func)
+           (do-function func (do-argument function-argument evaluated-arg name cvl) name cvl fvl)
+           (do-argument func (do-argument function-argument evaluated-arg name cvl) name cvl)))]))
+
+(define (do-argument line evaluated-arg name cvl)
+  (let* ([entrancd-splitter (make-splitter "entranc'd by")]
+         [joind-splitter (make-splitter "join'd with")])
+    (cond
+      [(entrancd-splitter line)
+       (let* ([splitter-res (entrancd-splitter line)]
+              [ex1 (string-join (first splitter-res))]
+              [ex2 (string-join (first (rest splitter-res)))])
+         (if (equal? ex1 "Hamlet")
+             (entrancd evaluated-arg (do-calculation name ex2 cvl))
+             (entrancd (do-calculation name ex1 cvl) evaluated-arg)))]
+      [(joind-splitter line)
+       (let* ([splitter-res (joind-splitter line)]
+              [ex1 (string-join (first splitter-res))]
+              [ex2 (string-join (first (rest splitter-res)))])
+         (if (equal? ex1 "Hamlet")
+             (joind evaluated-arg (do-calculation name ex2 cvl))
+             (joind (do-calculation name ex1 cvl) evaluated-arg)))]
+      [else line])))
 
 (define (do-calculation name line cvl)
    (let* ([bad-word-count (count-bad-words (string-split line) 0)]
@@ -221,7 +270,7 @@ Read through the starter code carefully. In particular, look for:
        [(equal? (length (string-split line)) 1)
         (cond
           [(member line self-refs) (retrieve-value cvl name)]
-          [(member-nested cvl line) (retrieve-value cvl line)]
+          [(retrieve-value cvl line) (retrieve-value cvl line)]
           [else (if (> bad-word-count 0)
                     (evaluate-bad line bad-word-count)
                     (evaluate-normal line))])]
@@ -235,16 +284,21 @@ Read through the starter code carefully. In particular, look for:
 
 (define (joind x y)
   (+ x y))
+       
+#|
+(retrieve-value lst value)
+  lst: a list of lists
+  value: a string
 
-; Check if member of nested list
-(define (member-nested lst value)
-  (if (empty? lst)
-      #f
-      (if (equal? value (first (first lst)))
-          #t
-          (member-nested (rest lst) value))))
-          
-; Retrieve value from nested list
+  Checks if value is a key in lst, which is a list of key, value lists.
+  If value is a key in lst, this function returns the value for that key.
+  Otherwise, the function returns #f.
+
+> (retrieve-value '('("Shelton" 5) '("Bob" 10)) "Shelton")
+5
+> (retrieve-value '('("Shelton" 5) '("Bob" 10)) "Aaron")
+#f
+|#
 (define (retrieve-value lst value)
   (if (empty? lst)
       #f
@@ -254,7 +308,28 @@ Read through the starter code carefully. In particular, look for:
             val
             (retrieve-value (rest lst) value)))))
             
-; Sublist function from EX1
+#|
+(sublist sub lst)
+  sub: a list
+  lst: a list
+
+  Checks whether 'sub' is a sublist of 'lst' (i.e., all the items in
+  'sub' appear consecutively in 'lst').
+
+  If 'sub' is a sublist of 'lst', this function returns the *index*
+  of the first element of the first occurrence of 'sub' within 'lst'.
+  Otherwise, this function returns #f.
+
+  Note that the empty list is a sublist of every list, and it first
+  occurs at index 0.
+
+> (sublist '(30 40) '(10 20 30 40 50))
+2
+> (sublist '(20 30) '(10 20 30 20 30 40 50))
+1
+> (sublist '(1 2 3) '(5 4 3 2 1))
+#f
+|#
 (define (sublist sub-lst lst)
   (sublist-helper sub-lst lst 0))
 
@@ -272,7 +347,27 @@ Read through the starter code carefully. In particular, look for:
     [(equal? (first sub-lst) (first lst)) (check-sublist (rest sub-lst) (rest lst))]
     [else #f]))
 
-; Splitter function from EX3
+#|
+(make-splitter splitter)
+  splitter: a string
+
+  Returns a function f that takes a string s and implements the following
+  behaviour:
+    1. If 'splitter' is *not* a substring of the 's' list,
+       return #f.
+    2. Else, return a list of two elements (list before after), where
+       'before' is the list of words in 's' *before* the first occurrence
+       of 'splitter', and 'after' is the list of words in 's' *after* the
+       first occurrence of 'splitter'. Note that neither 'before' nor
+       'after' include the words from the first occurrence of 'splitter'.
+
+> (define f (make-splitter "hello world"))
+> (f "this is a hello world kind of party")
+'(("this" "is" "a") ("kind" "of" "party"))
+> (f "this is a hello not world kind of party")
+#f
+
+|#
 (define (make-splitter splitter)
   (lambda (lst)
     (let* ([n (sublist (string-split splitter) (string-split lst))])
@@ -280,8 +375,5 @@ Read through the starter code carefully. In particular, look for:
           #f
           (list (take (string-split lst) n) (drop (string-split lst) (+ n (length (string-split splitter)))))))))
 
-;(interpret "descriptions.txt")
-;(interpret "name_lookup.txt")
-(interpret "sample.txt")
-;(interpret "part1.txt")
-;(interpret "arithmetic.txt")
+
+
