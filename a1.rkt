@@ -144,11 +144,11 @@ Read through the starter code carefully. In particular, look for:
   of a FunShake file.
   line: a string
 
-  Returns a list lines before the first occurence of line,
+  Returns a list of lines excluding the first line before the first occurence of line,
   else return an empty list if line does not occur in body.
 
-> (split-left '("First line" "Test" "Second line") "Test")
-2
+> (split-left '("First line" "Second line" "Test" "Third line") "Test")
+'("Second line")
 |#
 
 (define (split-left body line)
@@ -156,13 +156,35 @@ Read through the starter code carefully. In particular, look for:
       '()
       (rest (take body (sublist (list line) body)))))
 
-; Return a list of everything after the first occurence of word, else return empty list if word does not occur in body
+#|
+(split-right body line)
+  body: a list of lines corresponding to the semantically meaningful text
+  of a FunShake file.
+  line: a string
+
+  Returns a list of lines after the first occurence of line,
+  else return an empty list if line does not occur in body.
+
+> (split-right '("First line" "Test" "Second line" "Third line") "Test")
+'("Second line" "Third Line")
+|#
 (define (split-right body word)
   (if (equal? (sublist (list word) body) #f)
       '()
       (rest (drop body (sublist (list word) body)))))
 
-; Character parsing functions
+#|
+(evaluate-character line)
+  line: a string from Dramatis Personae of type "<char>, <description>"
+
+  Splits the character and description and returns a list of character name
+  and the value according to FunShake evaluation for literals.
+
+> (evaluate-character "Bob, a charming young nobleman from Verona")
+'("Bob" 6)
+> (evaluate-character "Bob, a scoundrelous and vile merchant")
+'("Bob" -20)
+|#
 (define (evaluate-character line)
   (let* ([name (first (string-split line ","))]
          [description (first (rest (string-split line ",")))]
@@ -172,11 +194,34 @@ Read through the starter code carefully. In particular, look for:
         (list name (evaluate-bad description bad-word-count))
         (list name (evaluate-normal description)))))
 
+#|
+(evaluate-function line)
+  line: a string from Settings of type "<name>, <expr>"
+
+  Splits the name and expression and returns a list of function name
+  and the expression.
+
+> (evaluate-function "Verona, a magical unicorn gathering entranc'd by Hamlet.")
+'("Verona" " a magical unicorn gathering entranc'd by Hamlet.")
+|#
 (define (evaluate-function line)
   (let* ([f-name (first (string-split line ","))]
          [description (first (rest (string-split line ",")))])
    (list f-name description)))
 
+#|
+(count-bad-words description-list acc)
+  description-list: a list of words
+  acc: a integer counter used to count number of bad words
+
+  Counts the number of bad words in description-list according to FunShake
+  and returns the count of such bad-words.
+
+> (count-bad-words '("a" "vile" "and" "wicked" "man") 0)
+2
+> (count-bad-words '("a" "good" "and" "cool" "man") 0)
+0
+|#
 (define (count-bad-words description-list acc)
   (if (empty? description-list)
       acc
@@ -184,10 +229,30 @@ Read through the starter code carefully. In particular, look for:
           (count-bad-words (rest description-list) acc)
           (count-bad-words (rest description-list) (+ acc 1)))))
 
-; Evaluate expressions
+#|
+(evaluate-bad description b)
+  description: a string representing a description
+  b: a integer representing the number of bad words in description
+
+  Evaluates the description with the given number of bad words and
+  returns an integer value.
+
+> (evaluate-bad "a vile and wicked man" 2)
+-20
+|#
 (define (evaluate-bad description b)
   (* (* -1 (expt 2 b)) (length (string-split description))))
 
+#|
+(evaluate-normal description)
+  description: a string representing a description
+
+  Evaluates the description normally by counting the number of words,
+  returns an integer value.
+
+> (evaluate-normal "this should be five words")
+5
+|#
 (define (evaluate-normal description)
   (length (string-split description)))
 
