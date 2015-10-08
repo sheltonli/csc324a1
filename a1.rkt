@@ -294,10 +294,10 @@ Read through the starter code carefully. In particular, look for:
             [func (retrieve-value fvl function-name)])
        ; this doesn't work for nested functions, need to figure that out
        (if (function-splitter func)
-           (do-function func (do-argument function-argument evaluated-arg name cvl) name cvl fvl)
-           (do-argument func (do-argument function-argument evaluated-arg name cvl) name cvl)))]))
+           (do-function func (do-hamlet-calculation function-argument evaluated-arg name cvl) name cvl fvl)
+           (do-hamlet-calculation func (do-hamlet-calculation function-argument evaluated-arg name cvl) name cvl)))]))
 
-(define (do-argument line evaluated-arg name cvl)
+(define (do-hamlet-calculation line evaluated-arg name cvl)
   (let* ([entrancd-splitter (make-splitter "entranc'd by")]
          [joind-splitter (make-splitter "join'd with")])
     (cond
@@ -317,6 +317,29 @@ Read through the starter code carefully. In particular, look for:
              (joind (do-calculation name ex1 cvl) evaluated-arg)))]
       [else line])))
 
+#|
+(do-calculation name line cvl)
+  name: a string, character name who says the line of dialogue
+  line: a string, line of dialogue
+  cvl: a list of lists, list that stores lists of key, values (characters and their calculated value)
+
+  Evaluates the line of dialogue according to FunShake. Returns an integer
+  that is the value of the line according to FunShake.
+
+  Cases:
+  1. Line of dialogue contains an entranc'd by. Calculate the value of the
+  first expression, the second expression, and then multiply them together.
+  2. Line of dialogue contains an join'd with. Calculate the value of the
+  first expression, the second expression, and then add them together.
+  3. Singular word in the line.
+     A) Word is a self identifier, return value of character who says line.
+     B) Word is a name, return value of that name by referring to cvl.
+     C) Evaluate depending on if word is a bad word or not.
+  4. None of the above cases, so evaluate like a regular description.
+
+> (do-calculation "Shelton" "Test join'd with test" '('("Shelton" 5)))
+2
+|#
 (define (do-calculation name line cvl)
    (let* ([bad-word-count (count-bad-words (string-split line) 0)]
           [entrancd-splitter (make-splitter "entranc'd by")]
@@ -343,10 +366,23 @@ Read through the starter code carefully. In particular, look for:
         (if (> bad-word-count 0)
         (evaluate-bad line bad-word-count)
         (evaluate-normal line))])))
+#|
+(entrancd x y)
+  x: an integer
+  y: an integer
 
+  Returns the value of x and y multipled together.
+|#
 (define (entrancd x y)
   (* x y))
 
+#|
+(joind x y)
+  x: an integer
+  y: an integer
+
+  Returns the value of x and y added together.
+|#
 (define (joind x y)
   (+ x y))
        
@@ -398,6 +434,7 @@ Read through the starter code carefully. In particular, look for:
 (define (sublist sub-lst lst)
   (sublist-helper sub-lst lst 0))
 
+;Helper function to the above function
 (define (sublist-helper sub-lst lst acc)
   (cond
     [(empty? sub-lst) 0]
@@ -405,6 +442,20 @@ Read through the starter code carefully. In particular, look for:
     [(equal? (check-sublist sub-lst lst) #t) acc]
     [else (sublist-helper sub-lst (rest lst) (+ acc 1))]))
 
+#|
+(check-sublist sub-lst lst)
+  sub-lst: a list
+  lst: a list
+
+  Checks if sub-lst is a sublist of lst by comparing from the
+  first item of each list. Returns #t if sub-lst is a sublist of lst
+  and #f otherwise.
+
+>(check-sublist '(1 2) '(4 5 1 2 6 7))
+#f
+>(check-sublist '(1 2) '(1 2 1 6 7))
+#t
+|#
 (define (check-sublist sub-lst lst)
   (cond
     [(empty? sub-lst) #t]
