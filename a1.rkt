@@ -134,7 +134,6 @@ Read through the starter code carefully. In particular, look for:
   (define characters-value-list (map evaluate-character characters-text-list))
   (define functions-value-list (map evaluate-function functions-text-list))
   (evaluate-dialogue dialogue-text-list '() characters-value-list functions-value-list)
-  characters-value-list
   )
 
 ; The following two helper functions are used to section the body text into characters, functions and dialogue
@@ -265,7 +264,8 @@ Read through the starter code carefully. In particular, look for:
   fvl: a list of lists, list that stores lists of key, values (function and expression)
 
   Evaluates the dialogue by appending each line's value after
-  being evaluated according to FunShake.
+  being evaluated according to FunShake. Checks edge case where dialogue
+  line is empty (ie. just a period). In this case the value of the line is 0.
 
 > (evaluate-dialogue '("Shelton" "One two" "Aaron:" "One join'd with one") '() '(("Shelton" 5)("Aaron" 10)) '())
 '(2 2)
@@ -273,9 +273,34 @@ Read through the starter code carefully. In particular, look for:
 (define (evaluate-dialogue dialogue-list acc cvl fvl)
   (if (empty? dialogue-list)
       acc
-      ; need if to check for case of blank dialogue line , then append 0 to acc
-      (let* ([name (first (string-split (first dialogue-list) ":"))])
-        (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)) cvl fvl))) cvl fvl))))
+      (if (empty? (rest dialogue-list))
+          (append acc (list 0))
+          (if (evaluate-blank (first (rest dialogue-list)))
+              (evaluate-dialogue (rest dialogue-list) (append acc (list 0)) cvl fvl)
+              (let* ([name (first (string-split (first dialogue-list) ":"))])
+                (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)) cvl fvl))) cvl fvl))))))
+
+#|
+(evaluate-blank line)
+  line: a string, dialogue line
+
+  This function is used to determine if the next line of dialogue is blank or not.
+  If there was a blank line of dialogue, it gets ignored when it is parsed so
+  the next line should be the name of the character who says the proceeding line.
+  Returns true if line is of length one and has a colon (ie. "Bob:") and false otherwise.
+
+> (evaluate-blank "Bob:")
+#t
+> (evaluate-blank "One join'd with one")
+#f
+|#
+(define (evaluate-blank line)
+  (if (equal? (length (string-split line)) 1)
+      (let* ([line-length (string-length line)])
+        (if (equal? (string-ref line (- line-length 1)) #\:)
+            #t
+            #f))
+      #f))
 
 #|
 (evaluate-line name line cvl fvl)
