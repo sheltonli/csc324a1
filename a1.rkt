@@ -134,6 +134,7 @@ Read through the starter code carefully. In particular, look for:
   (define characters-value-list (map evaluate-character characters-text-list))
   (define functions-value-list (map evaluate-function functions-text-list))
   (evaluate-dialogue dialogue-text-list '() characters-value-list functions-value-list)
+  characters-value-list
   )
 
 ; The following two helper functions are used to section the body text into characters, functions and dialogue
@@ -256,7 +257,19 @@ Read through the starter code carefully. In particular, look for:
 (define (evaluate-normal description)
   (length (string-split description)))
 
-;Evaluate dialogue
+#|
+(evaluate-dialogue dialogue-list acc cvl fvl)
+  dialogue-list: a list of dialogue lines
+  acc: list, used to accumulate the values for each line
+  cvl: a list of lists, list that stores lists of key, values (characters and their calculated value)
+  fvl: a list of lists, list that stores lists of key, values (function and expression)
+
+  Evaluates the dialogue by appending each line's value after
+  being evaluated according to FunShake.
+
+> (evaluate-dialogue '("Shelton" "One two" "Aaron:" "One join'd with one") '() '(("Shelton" 5)("Aaron" 10)) '())
+'(2 2)
+|#
 (define (evaluate-dialogue dialogue-list acc cvl fvl)
   (if (empty? dialogue-list)
       acc
@@ -264,6 +277,25 @@ Read through the starter code carefully. In particular, look for:
       (let* ([name (first (string-split (first dialogue-list) ":"))])
         (evaluate-dialogue (rest (rest dialogue-list)) (append acc (list (evaluate-line name (first (rest dialogue-list)) cvl fvl))) cvl fvl))))
 
+#|
+(evaluate-line name line cvl fvl)
+  dialogue-list: a list of dialogue lines
+  name: a string, character who said the line
+  line: a string representing a line of dialogue
+  cvl: a list of lists, list that stores lists of key, values (characters and their calculated value)
+  fvl: a list of lists, list that stores lists of key, values (function and expression)
+
+  Evaluates the line by calling do-calculation. Figures out if the line is
+  a function call. There are two csaes when it is a function call:
+  1. If it is a nested function call, it will call do-function.
+  2. Else it will calculate the value of the function with the argument.
+  Returns an integer value for the line after being evaluated according to FunShake.
+
+> (evaluate-line "Shelton" "One join'd with one" '(("Shelton" 5)("Aaron" 10)) '())
+2
+> (evaluate-line "Shelton" "The song of Scotland and one" '(("Shelton" 5)) '(("Verona" "a magical unicorn gathering entranc'd by Hamlet.") ("Scotland" "The song of Verona and Hamlet join'd with one")))
+8
+|#
 (define (evaluate-line name line cvl fvl)
   (define function-splitter (make-splitter "The song of"))
   (define and-splitter (make-splitter "and"))
@@ -275,12 +307,29 @@ Read through the starter code carefully. In particular, look for:
             [function-name (first (first and-splitter-res))]
             [function-argument (string-join (first (rest and-splitter-res)))]
             [func (retrieve-value fvl function-name)])
-       ; this doesn't work for nested functions, need to figure that out
        (if (function-splitter func)
            (do-function func (do-calculation name function-argument cvl) name cvl fvl)
-           (do-calculation name (string-replace func "Hamlet" function-argument) cvl)))]
+           (do-hamlet-calculation func (do-calculation name function-argument cvl) name cvl)))]
     [else (do-calculation name line cvl)]))
 
+#|
+(do-function func evaluated-arg name cvl fvl)
+  func: a string representing a function expression
+  evaluated-arg: integer representing the value of the argument to func
+  name: a string, character who said the line
+  cvl: a list of lists, list that stores lists of key, values (characters and their calculated value)
+  fvl: a list of lists, list that stores lists of key, values (function and expression)
+
+  Evaluates a function according to FunShake. A helper function to evaluate-line.
+  Similar to evaluate-line, this function checks if there are nested function calls. 
+  1. If it is a nested function call, it will call do-function again but with the argument being calculated
+  with respect to Hamlet.
+  2. Else it will calculate the value of the function with respect to Hamlet.
+  Returns an integer value for the line after being evaluated according to FunShake.
+
+> (do-function "The song of Verona and Hamlet join'd with one." 5 "Shelton" '(("Shelton" 5)) '(("Verona" "a magical unicorn gathering entranc'd by Hamlet.") ("Scotland" "The song of Verona and Hamlet join'd with one")))
+24
+|#
 (define (do-function func evaluated-arg name cvl fvl)
   (define function-splitter (make-splitter "The song of"))
   (define and-splitter (make-splitter "and"))
@@ -292,11 +341,35 @@ Read through the starter code carefully. In particular, look for:
             [function-name (first (first and-splitter-res))]
             [function-argument (string-join (first (rest and-splitter-res)))]
             [func (retrieve-value fvl function-name)])
-       ; this doesn't work for nested functions, need to figure that out
        (if (function-splitter func)
            (do-function func (do-hamlet-calculation function-argument evaluated-arg name cvl) name cvl fvl)
            (do-hamlet-calculation func (do-hamlet-calculation function-argument evaluated-arg name cvl) name cvl)))]))
+#|
+(do-hamlet-calculation line evaluated-arg name cvl)
+  line: a string, more so an expression that contains a Hamlet
+  evaluated-arg: an integer representing the value of an argument to the FunShake function
+  name: a string, character name who says the line of dialogue
+  cvl: a list of lists, list that stores lists of key, values (characters and their calculated value)
 
+  Evaluates an expression that contains a "Hamlet" according to FunShake. Returns an integer
+  that is the value of the line according to FunShake.
+
+  Cases:
+  1. Expression contains an entranc'd by. Split the expression on entranc'd by.
+     A) If the first expression is Hamlet, replace it with evaluated-arg,
+     multiply it with the calculated value of expression 2.
+     B) If the second expression is Hamlet, replace it with evaluated-arg,
+     multiply it with the calculated value of expression 1.
+  2. Expression contains an join'd with. Split the expression on join'd with.
+     A) If the first expression is Hamlet, replace it with evaluated-arg,
+     add it to the calculated value of expression 2.
+     B) If the second expression is Hamlet, replace it with evaluated-arg,
+     add it to the calculated value of expression 1.
+  3. Expression is Hamlet itself so just return evaluated-arg.
+
+> (do-hamlet-calculation "Test join'd with Hamlet" 5 "Shelton" '('("Shelton" 5)))
+6
+|#
 (define (do-hamlet-calculation line evaluated-arg name cvl)
   (let* ([entrancd-splitter (make-splitter "entranc'd by")]
          [joind-splitter (make-splitter "join'd with")])
@@ -315,7 +388,7 @@ Read through the starter code carefully. In particular, look for:
          (if (equal? ex1 "Hamlet")
              (joind evaluated-arg (do-calculation name ex2 cvl))
              (joind (do-calculation name ex1 cvl) evaluated-arg)))]
-      [else line])))
+      [else evaluated-arg])))
 
 #|
 (do-calculation name line cvl)
@@ -339,6 +412,8 @@ Read through the starter code carefully. In particular, look for:
 
 > (do-calculation "Shelton" "Test join'd with test" '('("Shelton" 5)))
 2
+> (do-calculation "Shelton" "Myself entranc'd by a vile woman" '(("Shelton" 5)))
+-30
 |#
 (define (do-calculation name line cvl)
    (let* ([bad-word-count (count-bad-words (string-split line) 0)]
@@ -490,6 +565,3 @@ Read through the starter code carefully. In particular, look for:
       (if (equal? n #f)
           #f
           (list (take (string-split lst) n) (drop (string-split lst) (+ n (length (string-split splitter)))))))))
-
-
-
